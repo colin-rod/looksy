@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { AIService } from '../services/aiService';
 import { UploadService } from '../services/uploadService';
-import { ScoreBar, ItemCard, FeedbackGroup } from '../components';
+import { ScoreBar, ItemCard, FeedbackGroup, AnimatedScoreCircle, StyleInsightsDashboard, ActionableRecommendations, ClosetIntegratedRecommendations } from '../components';
 import { 
   OutfitAnalysis, 
   ClinicalAnalysis, 
@@ -52,6 +52,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState('processing');
+  const [showScoreBreakdown, setShowScoreBreakdown] = useState(false);
 
   useEffect(() => {
     loadAnalysisResults();
@@ -122,6 +123,48 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
     navigation.navigate(SCREEN_NAMES.MAIN_TABS, { screen: SCREEN_NAMES.HOME });
   };
 
+  const handleScorePress = () => {
+    setShowScoreBreakdown(!showScoreBreakdown);
+  };
+
+  const getScoreExplanation = (scoreType: string, score: number) => {
+    const explanations = {
+      overall: {
+        excellent: "Outstanding style execution with perfect balance across all elements",
+        good: "Strong style foundation with minor areas for refinement",
+        fair: "Decent style base but several areas need attention",
+        poor: "Significant style improvements needed across multiple areas"
+      },
+      style: {
+        excellent: "Perfect harmony between pieces creating a cohesive, intentional look",
+        good: "Well-coordinated elements with clear style direction",
+        fair: "Some style coordination but lacking clear direction",
+        poor: "Conflicting style elements need better coordination"
+      },
+      fit: {
+        excellent: "All garments fit perfectly, enhancing your silhouette",
+        good: "Most pieces fit well with minor adjustments needed",
+        fair: "Some fit issues affecting overall appearance",
+        poor: "Significant fit problems requiring alterations or size changes"
+      },
+      color: {
+        excellent: "Colors create beautiful harmony and complement your features",
+        good: "Good color coordination with pleasing combinations",
+        fair: "Colors work but could be more intentional",
+        poor: "Color combinations clash or don't enhance your look"
+      },
+      occasion: {
+        excellent: "Perfect appropriateness for the intended setting",
+        good: "Well-suited for the occasion with good judgment",
+        fair: "Generally appropriate but could be more refined",
+        poor: "Doesn't match the occasion's dress code expectations"
+      }
+    };
+
+    const category = score >= 90 ? 'excellent' : score >= 70 ? 'good' : score >= 50 ? 'fair' : 'poor';
+    return explanations[scoreType as keyof typeof explanations]?.[category] || "Style analysis complete";
+  };
+
   if (loading || !analysis) {
     return (
       <SafeAreaView style={styles.container}>
@@ -161,28 +204,79 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
 
         {/* Overall Score */}
         <View style={styles.overallScoreContainer}>
-          <View style={[styles.scoreCircle, { borderColor: getScoreColor(analysis.overall_score) }]}>
-            <Text style={[styles.scoreNumber, { color: getScoreColor(analysis.overall_score) }]}>
-              {analysis.overall_score.toFixed(1)}
-            </Text>
-            <Text style={styles.scoreOutOf}>/ 100</Text>
-          </View>
-          <Text style={styles.scoreLabel}>
-            {getScoreLabel(analysis.overall_score)}
-          </Text>
-          <Text style={styles.styleCategory}>
-            Style: {analysis.style_category}
+          <AnimatedScoreCircle
+            score={analysis.overall_score}
+            size="large"
+            onPress={handleScorePress}
+            label={getScoreLabel(analysis.overall_score)}
+            subtitle={analysis.style_category}
+          />
+          <Text style={styles.scoreExplanation}>
+            {getScoreExplanation('overall', analysis.overall_score)}
           </Text>
         </View>
 
         {/* Detailed Scores */}
         <View style={commonStyles.card}>
-          <Text style={commonStyles.sectionTitle}>Score Breakdown</Text>
+          <TouchableOpacity 
+            style={styles.scoreBreakdownHeader}
+            onPress={handleScorePress}
+          >
+            <Text style={commonStyles.sectionTitle}>Score Breakdown</Text>
+            <Text style={styles.toggleHint}>
+              {showScoreBreakdown ? '▲ Hide Details' : '▼ Tap for Details'}
+            </Text>
+          </TouchableOpacity>
           
-          <ScoreBar label="Style" score={analysis.style_score} />
-          <ScoreBar label="Fit" score={analysis.fit_score} />
-          <ScoreBar label="Color" score={analysis.color_score} />
-          <ScoreBar label="Occasion" score={analysis.occasion_appropriateness} />
+          <View style={styles.mainScoresContainer}>
+            <TouchableOpacity 
+              style={styles.scoreItem}
+              onPress={() => {}}
+            >
+              <ScoreBar label="Style" score={analysis.style_score} />
+              {showScoreBreakdown && (
+                <Text style={styles.scoreExplanationSmall}>
+                  {getScoreExplanation('style', analysis.style_score)}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.scoreItem}
+              onPress={() => {}}
+            >
+              <ScoreBar label="Fit" score={analysis.fit_score} />
+              {showScoreBreakdown && (
+                <Text style={styles.scoreExplanationSmall}>
+                  {getScoreExplanation('fit', analysis.fit_score)}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.scoreItem}
+              onPress={() => {}}
+            >
+              <ScoreBar label="Color" score={analysis.color_score} />
+              {showScoreBreakdown && (
+                <Text style={styles.scoreExplanationSmall}>
+                  {getScoreExplanation('color', analysis.color_score)}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.scoreItem}
+              onPress={() => {}}
+            >
+              <ScoreBar label="Occasion" score={analysis.occasion_appropriateness} />
+              {showScoreBreakdown && (
+                <Text style={styles.scoreExplanationSmall}>
+                  {getScoreExplanation('occasion', analysis.occasion_appropriateness)}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
           
           {/* Clinical Sub-Scores if available */}
           {'sub_scores' in analysis && analysis.sub_scores && (
@@ -201,45 +295,17 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           )}
         </View>
 
-        {/* Feedback */}
-        <View style={commonStyles.card}>
-          <Text style={commonStyles.sectionTitle}>Feedback</Text>
-          
-          <FeedbackGroup 
-            title="✅ What's Working" 
-            items={analysis.detailed_feedback.strengths} 
-          />
-          
-          <FeedbackGroup 
-            title="💡 Suggestions" 
-            items={analysis.detailed_feedback.improvements} 
-          />
-          
-          <FeedbackGroup 
-            title="🎯 Style Match" 
-            items={[analysis.detailed_feedback.style_alignment]} 
-            icon=""
-          />
-          
-          {/* Clinical Recommendations if available */}
-          {'recommendations' in analysis && analysis.recommendations && (
-            <>
-              {analysis.recommendations.minor_adjustments && analysis.recommendations.minor_adjustments.length > 0 && (
-                <FeedbackGroup 
-                  title="📏 Quick Adjustments" 
-                  items={analysis.recommendations.minor_adjustments} 
-                />
-              )}
-              
-              {analysis.recommendations.closet_recommendations && analysis.recommendations.closet_recommendations.length > 0 && (
-                <FeedbackGroup 
-                  title="👕 From Your Closet" 
-                  items={analysis.recommendations.closet_recommendations} 
-                />
-              )}
-            </>
-          )}
-        </View>
+        {/* Style Insights Dashboard */}
+        <StyleInsightsDashboard analysis={analysis} />
+
+        {/* Actionable Recommendations */}
+        <ActionableRecommendations 
+          analysis={analysis}
+          onRecommendationAction={(action, recommendation) => {
+            console.log('Recommendation action:', action, recommendation);
+            // Future: Track user engagement with recommendations
+          }}
+        />
 
         {/* Clinical Garment Detection if available */}
         {'garment_detection' in analysis && analysis.garment_detection && analysis.garment_detection.length > 0 && (
@@ -297,32 +363,16 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
           </View>
         )}
 
-        {/* Closet Confirmation Button - Only show if clinical analysis has detected items */}
-        {'garment_detection' in analysis && analysis.garment_detection && analysis.garment_detection.length > 0 && (
-          <View style={styles.closetSection}>
-            <Text style={styles.sectionTitle}>Build Your Closet</Text>
-            <TouchableOpacity 
-              style={styles.closetButton} 
-              onPress={() => navigation.navigate(SCREEN_NAMES.CLOSET_CONFIRMATION, {
-                outfitId,
-                detectedItems: analysis.garment_detection?.map(item => ({
-                  id: item.item_id,
-                  category: item.category,
-                  attributes: item.attributes,
-                  confidence: Object.values(item.confidence_scores).reduce((a, b) => a + b, 0) / Object.values(item.confidence_scores).length,
-                  existsInCloset: false
-                })) || []
-              })}
-            >
-              <Text style={styles.closetButtonText}>
-                👕 Confirm Closet Items ({analysis.garment_detection.length})
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.closetDescription}>
-              Help us learn your wardrobe for better recommendations
-            </Text>
-          </View>
-        )}
+        {/* Closet-Integrated Recommendations */}
+        <ClosetIntegratedRecommendations
+          analysis={analysis}
+          navigation={navigation}
+          outfitId={outfitId}
+          onRecommendationAction={(action, recommendation) => {
+            console.log('Closet recommendation action:', action, recommendation);
+            // Future: Track closet-related user actions
+          }}
+        />
 
         {/* Action Buttons */}
         <View style={styles.actions}>
@@ -671,6 +721,46 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1e40af',
     textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  
+  // Enhanced Score UI Styles
+  scoreExplanation: {
+    fontSize: 14,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    marginTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    lineHeight: 20,
+  },
+  
+  scoreBreakdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  
+  toggleHint: {
+    fontSize: 12,
+    color: theme.colors.primary,
+    fontWeight: '500',
+  },
+  
+  mainScoresContainer: {
+    gap: theme.spacing.sm,
+  },
+  
+  scoreItem: {
+    paddingVertical: theme.spacing.xs,
+  },
+  
+  scoreExplanationSmall: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing.xs,
+    marginLeft: 80,
+    lineHeight: 16,
     fontStyle: 'italic',
   },
 });
