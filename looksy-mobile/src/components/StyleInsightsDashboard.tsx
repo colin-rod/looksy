@@ -30,7 +30,7 @@ interface InsightCard {
   category: 'strength' | 'opportunity' | 'trend' | 'recommendation';
 }
 
-export const StyleInsightsDashboard: React.FC<StyleInsightsDashboardProps> = ({
+export const StyleInsightsDashboard: React.FC<StyleInsightsDashboardProps> = React.memo(({
   analysis,
   userStyleHistory = []
 }) => {
@@ -287,7 +287,7 @@ export const StyleInsightsDashboard: React.FC<StyleInsightsDashboardProps> = ({
       </ScrollView>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -295,6 +295,23 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
+  },
+  
+  // Error States
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
+  errorTitle: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.error,
+    marginBottom: theme.spacing.sm,
+  },
+  errorText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
   },
   
   // Tab Navigation

@@ -283,3 +283,68 @@ export const PROCESSING_MESSAGES = {
   preparing: 'Preparing your results...',
   completed: 'Analysis complete!'
 } as const;
+
+// Theme Types
+export interface StyleTheme {
+  colors: {
+    primary: string;
+    secondary: string;
+    success: string;
+    warning: string;
+    error: string;
+    background: string;
+    surface: string;
+    text: {
+      primary: string;
+      secondary: string;
+      light: string;
+    };
+  };
+  spacing: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+  };
+  borderRadius: {
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+    full: number;
+  };
+  typography: {
+    sizes: {
+      xs: number;
+      sm: number;
+      md: number;
+      lg: number;
+      xl: number;
+      xxl: number;
+    };
+    weights: {
+      normal: string;
+      medium: string;
+      semibold: string;
+      bold: string;
+    };
+    lineHeights: {
+      tight: number;
+      normal: number;
+      relaxed: number;
+      loose: number;
+    };
+  };
+  accessibility: {
+    minTouchTarget: number;
+    focusColor: string;
+    highContrastRatio: number;
+  };
+  animation: {
+    fast: number;
+    normal: number;
+    slow: number;
+    verySlow: number;
+  };
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -27,12 +27,24 @@ interface RecommendationCard {
   priority: number;
 }
 
-export const ActionableRecommendations: React.FC<ActionableRecommendationsProps> = ({
+export const ActionableRecommendations: React.FC<ActionableRecommendationsProps> = React.memo(({
   analysis,
   onRecommendationAction
 }) => {
   const [completedActions, setCompletedActions] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  
+  // Validate analysis data
+  if (!analysis) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>No Recommendations Available</Text>
+          <Text style={styles.errorText}>Complete an outfit analysis to receive personalized recommendations.</Text>
+        </View>
+      </View>
+    );
+  }
 
   const generateRecommendationCards = (): RecommendationCard[] => {
     const cards: RecommendationCard[] = [];
@@ -329,7 +341,7 @@ export const ActionableRecommendations: React.FC<ActionableRecommendationsProps>
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -337,6 +349,23 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
+  },
+  
+  // Error States
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
+  errorTitle: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.error,
+    marginBottom: theme.spacing.sm,
+  },
+  errorText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
   },
   
   header: {
@@ -371,7 +400,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     backgroundColor: '#f8f9fa',
-    borderRadius: theme.borderRadius.full,
+    borderRadius: 20,
     marginRight: theme.spacing.sm,
   },
   

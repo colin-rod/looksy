@@ -1,15 +1,16 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   Animated, 
   TouchableOpacity, 
-  Vibration,
-  Platform
 } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { theme, getScoreColor, getScoreLabel } from '../theme';
+import { theme, getScoreColor, getScoreLabel } from '../../theme';
+import { useScoreAnimation } from '../../hooks/useScoreAnimation';
+import { SCORE_CIRCLE_SIZES } from '../../constants/components';
+import { validateScore, calculatePercentage, shouldShowExcellentBadge, shouldShowPerfectBadge } from '../../utils/scoreUtils';
 
 interface AnimatedScoreCircleProps {
   score: number;
@@ -33,24 +34,14 @@ export const AnimatedScoreCircle: React.FC<AnimatedScoreCircleProps> = React.mem
   subtitle
 }) => {
   // Input validation and sanitization
-  const validatedScore = Math.max(0, Math.min(isNaN(score) ? 0 : score, maxScore));
+  const validatedScore = validateScore(score, maxScore);
   const validatedMaxScore = Math.max(1, isNaN(maxScore) ? 100 : maxScore);
+  const percentage = calculatePercentage(validatedScore, validatedMaxScore);
   
-  const animatedScore = useRef(new Animated.Value(0)).current;
-  const scaleAnimation = useRef(new Animated.Value(0.8)).current;
-  const opacityAnimation = useRef(new Animated.Value(0)).current;
-  const isMounted = useRef(true);
-  
-  // Size configurations
-  const sizeConfig = {
-    small: { radius: 40, strokeWidth: 6, fontSize: 16, containerSize: 100 },
-    medium: { radius: 60, strokeWidth: 8, fontSize: 24, containerSize: 140 },
-    large: { radius: 80, strokeWidth: 10, fontSize: 32, containerSize: 180 },
-  }[size];
-
+  // Get size configuration
+  const sizeConfig = SCORE_CIRCLE_SIZES[size];
   const { radius, strokeWidth, fontSize, containerSize } = sizeConfig;
   const circumference = 2 * Math.PI * radius;
-  const percentage = (validatedScore / validatedMaxScore) * 100;
   
   // Safe theme function calls with fallbacks
   const scoreColor = (() => {
@@ -69,66 +60,15 @@ export const AnimatedScoreCircle: React.FC<AnimatedScoreCircleProps> = React.mem
     }
   })();
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
+  // Animation hook
+  const {
+    animatedScore,
+    scaleAnimation,
+    opacityAnimation,
+    triggerPressAnimation,
+  } = useScoreAnimation({ score: validatedScore, showAnimation, percentage });
 
-  useEffect(() => {
-    if (!isMounted.current) return;
-    
-    try {
-      if (showAnimation) {
-        // Initial entrance animation
-        Animated.parallel([
-          Animated.spring(scaleAnimation, {
-            toValue: 1,
-            useNativeDriver: true,
-            tension: 50,
-            friction: 8,
-          }),
-          Animated.timing(opacityAnimation, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ]).start((finished) => {
-          if (!finished || !isMounted.current) return;
-          
-          // Score animation after entrance
-          Animated.timing(animatedScore, {
-            toValue: percentage,
-            duration: 1500,
-            useNativeDriver: false,
-          }).start((finished) => {
-            if (!finished || !isMounted.current) return;
-            
-            // Celebration vibration for high scores (with platform check)
-            if (validatedScore >= 80 && Platform.OS !== 'web') {
-              try {
-                Vibration.vibrate([0, 100, 50, 100]);
-              } catch (error) {
-                // Vibration not available, silently fail
-              }
-            }
-          });
-        });
-      } else {
-        // No animation - set final values immediately
-        scaleAnimation.setValue(1);
-        opacityAnimation.setValue(1);
-        animatedScore.setValue(percentage);
-      }
-    } catch (error) {
-      // Fallback to non-animated state if animations fail
-      scaleAnimation.setValue(1);
-      opacityAnimation.setValue(1);
-      animatedScore.setValue(percentage);
-    }
-  }, [validatedScore, showAnimation, percentage]);
-
+  // Memoized calculations
   const strokeDashoffset = useMemo(
     () => animatedScore.interpolate({
       inputRange: [0, 100],
@@ -137,41 +77,14 @@ export const AnimatedScoreCircle: React.FC<AnimatedScoreCircleProps> = React.mem
     [animatedScore, circumference]
   );
 
-  const handlePress = useCallback(() => {
-    if (onPress && isMounted.current) {
-      try {
-        // Haptic feedback (with platform check)
-        if (Platform.OS !== 'web') {
-          try {
-            Vibration.vibrate(50);
-          } catch {
-            // Vibration not available, silently continue
-          }
-        }
-        
-        // Quick scale animation
-        Animated.sequence([
-          Animated.timing(scaleAnimation, {
-            toValue: 0.95,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnimation, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-        ]).start();
-        
-        onPress();
-      } catch (error) {
-        // If animation fails, still call onPress
-        onPress();
-      }
-    }
-  }, [onPress, scaleAnimation]);
-
   const Wrapper = useMemo(() => onPress ? TouchableOpacity : View, [onPress]);
+
+  const handlePress = () => {
+    if (onPress) {
+      triggerPressAnimation();
+      onPress();
+    }
+  };
 
   return (
     <Wrapper
@@ -281,8 +194,25 @@ export const AnimatedScoreCircle: React.FC<AnimatedScoreCircleProps> = React.mem
         )}
       </Animated.View>
 
-      {/* Achievement indicators for high scores */}
-      {validatedScore >= 90 && (
+      {/* Achievement indicators */}
+      <AchievementBadges 
+        score={validatedScore} 
+        animatedScore={animatedScore} 
+      />
+    </Wrapper>
+  );
+});
+
+// Separate component for achievement badges
+const AchievementBadges: React.FC<{
+  score: number;
+  animatedScore: Animated.Value;
+}> = React.memo(({ score, animatedScore }) => {
+  if (!shouldShowExcellentBadge(score)) return null;
+
+  return (
+    <>
+      {shouldShowExcellentBadge(score) && (
         <Animated.View
           style={[
             styles.achievementBadge,
@@ -304,7 +234,7 @@ export const AnimatedScoreCircle: React.FC<AnimatedScoreCircleProps> = React.mem
         </Animated.View>
       )}
       
-      {validatedScore >= 95 && (
+      {shouldShowPerfectBadge(score) && (
         <Animated.View
           style={[
             styles.perfectBadge,
@@ -325,7 +255,7 @@ export const AnimatedScoreCircle: React.FC<AnimatedScoreCircleProps> = React.mem
           </Text>
         </Animated.View>
       )}
-    </Wrapper>
+    </>
   );
 });
 

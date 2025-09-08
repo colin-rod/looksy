@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ interface ClosetRecommendation {
   closetAction?: 'confirm_items' | 'view_alternatives' | 'add_wishlist';
 }
 
-export const ClosetIntegratedRecommendations: React.FC<ClosetIntegratedRecommendationsProps> = ({
+export const ClosetIntegratedRecommendations: React.FC<ClosetIntegratedRecommendationsProps> = React.memo(({
   analysis,
   navigation,
   outfitId,
@@ -36,6 +36,18 @@ export const ClosetIntegratedRecommendations: React.FC<ClosetIntegratedRecommend
 }) => {
   const [recommendations, setRecommendations] = useState<ClosetRecommendation[]>([]);
   const [completedActions, setCompletedActions] = useState<string[]>([]);
+  
+  // Validate required props
+  if (!analysis || !navigation || !outfitId) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Closet Integration Unavailable</Text>
+          <Text style={styles.errorText}>Missing required data for closet recommendations.</Text>
+        </View>
+      </View>
+    );
+  }
 
   useEffect(() => {
     generateClosetRecommendations();
@@ -312,7 +324,7 @@ export const ClosetIntegratedRecommendations: React.FC<ClosetIntegratedRecommend
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -322,6 +334,23 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
     borderWidth: 2,
     borderColor: '#e0e7ff',
+  },
+  
+  // Error States
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
+  errorTitle: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.error,
+    marginBottom: theme.spacing.sm,
+  },
+  errorText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
   },
   
   header: {

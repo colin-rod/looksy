@@ -27,6 +27,7 @@ export const theme: StyleTheme = {
     md: 12,
     lg: 16,
     xl: 20,
+    full: 9999,
   },
   typography: {
     sizes: {
@@ -43,6 +44,27 @@ export const theme: StyleTheme = {
       semibold: '600',
       bold: '700',
     },
+    lineHeights: {
+      tight: 1.2,
+      normal: 1.4,
+      relaxed: 1.6,
+      loose: 1.8,
+    },
+  },
+  
+  // Accessibility
+  accessibility: {
+    minTouchTarget: 44,
+    focusColor: '#007AFF',
+    highContrastRatio: 4.5,
+  },
+  
+  // Animation timing
+  animation: {
+    fast: 200,
+    normal: 300,
+    slow: 500,
+    verySlow: 1000,
   },
 };
 
